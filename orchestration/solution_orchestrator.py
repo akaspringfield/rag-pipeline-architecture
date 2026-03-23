@@ -1,4 +1,5 @@
 from services.knowledge_service import KnowledgeService
+from common.logger import log_step
 
 
 class SolutionOrchestrator:
@@ -9,8 +10,9 @@ class SolutionOrchestrator:
 
     def execute(self, context):
 
-        print(
-            f"[ORCHESTRATOR_ROUTE] => {context.query_type}"
+        log_step(
+            "[ORCHESTRATOR_ROUTE]",
+            context.query_type
         )
 
         if context.query_type == "knowledge":

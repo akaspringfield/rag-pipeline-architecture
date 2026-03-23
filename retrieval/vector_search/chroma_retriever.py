@@ -1,19 +1,22 @@
 """
 Builds a merged retriever across all three Chroma collections:
-  - faq     : FAQ entries (no chunking — 1 row = 1 doc)
-  - tickets : resolved support tickets (no chunking — 1 ticket = 1 doc)
-  - guides  : PDF guide chunks (RecursiveCharacterTextSplitter applied at ingest)
+  - faq     : FAQ entries
+  - tickets : resolved support tickets
+  - guides  : PDF guide chunks
 """
+
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.runnables import RunnableLambda
 from langchain_core.documents import Document
+
 from config.settings import (
     CHROMA_DIR,
     EMBED_MODEL,
     TOP_K_FAQ,
     TOP_K_TICKETS,
-    TOP_K_GUIDES
+    TOP_K_GUIDES,
+    MIN_SIMILARITY_SCORE
 )
 
 
@@ -22,6 +25,7 @@ def build_retriever(
     k_tickets: int = TOP_K_TICKETS,
     k_guides: int = TOP_K_GUIDES,
 ):
+
     print("STEP 1")
 
     embeddings = HuggingFaceEmbeddings(
@@ -50,26 +54,72 @@ def build_retriever(
 
     print("STEP 3")
 
-    faq_retriever = faq_store.as_retriever(
-        search_kwargs={"k": k_faq}
-    )
-
-    tickets_retriever = tickets_store.as_retriever(
-        search_kwargs={"k": k_tickets}
-    )
-
-    guides_retriever = guides_store.as_retriever(
-        search_kwargs={"k": k_guides}
-    )
-
     print("STEP 4")
 
     def retrieve(query: str) -> list[Document]:
-        # return ("SUCCESS: Retrieved documents for query: " + query,)
-        return (
-            faq_retriever.invoke(query)
-            + tickets_retriever.invoke(query)
-            + guides_retriever.invoke(query)
+
+        print(
+            f"[RETRIEVE_QUERY] => {query}"
         )
+
+        faq_docs = faq_store.similarity_search_with_score(
+            query,
+            k=k_faq
+        )
+
+        ticket_docs = tickets_store.similarity_search_with_score(
+            query,
+            k=k_tickets
+        )
+
+        guide_docs = guides_store.similarity_search_with_score(
+            query,
+            k=k_guides
+        )
+
+        results = (
+            faq_docs
+            + ticket_docs
+            + guide_docs
+        )
+
+        docs = []
+
+        for idx, (doc, score) in enumerate(results):
+
+            print(
+                f"[DOC_{idx+1}_SOURCE] => "
+                f"{doc.metadata.get('source')}"
+            )
+
+            print(
+                f"[DOC_{idx+1}_SCORE] => "
+                f"{score}"
+            )
+
+            print(
+                f"[DOC_{idx+1}_CONTENT] => "
+                f"{doc.page_content[:150]}"
+            )
+
+            if score <= MIN_SIMILARITY_SCORE:
+
+                docs.append(doc)
+
+                print(
+                    f"[DOC_{idx+1}] ACCEPTED"
+                )
+
+            else:
+
+                print(
+                    f"[DOC_{idx+1}] REJECTED"
+                )
+
+        print(
+            f"[FINAL_DOC_COUNT] => {len(docs)}"
+        )
+
+        return docs
 
     return RunnableLambda(retrieve)

@@ -1,5 +1,5 @@
 from rag_chain import build_chain
-
+from common.logger import log_step
 
 class KnowledgeService:
 
@@ -15,8 +15,9 @@ class KnowledgeService:
 
     def answer(self, query):
 
-        print(
-            f"[KNOWLEDGE_SERVICE_QUERY] => {query}"
+        log_step(
+            "[KNOWLEDGE_SERVICE_QUERY]",
+            query
         )
 
         chain = self.get_chain()

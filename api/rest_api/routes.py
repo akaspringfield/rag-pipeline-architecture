@@ -35,14 +35,15 @@ async def knowledge_solution(
 
         orchestrator = SolutionOrchestrator()
 
-        answer = orchestrator.execute(
+        response = orchestrator.execute(
             context
         )
 
         return {
             "user_id": user_id,
-            "query_type": context.query_type,
-            "answer": answer
+            "query_type": str(context.query_type),
+            "answer": response.answer,
+            "sources": response.sources
         }
 
     except KnowledgeBaseEmptyException:
