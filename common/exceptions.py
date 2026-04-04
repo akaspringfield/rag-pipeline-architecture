@@ -1,0 +1,2 @@
+class KnowledgeBaseEmptyException(Exception):
+    pass

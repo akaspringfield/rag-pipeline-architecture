@@ -9,3 +9,4 @@ class QueryContext:
     query: str
     query_type: str
     rewritten_query: Optional[str] = None
+    retrieval_profile: str = "default"
