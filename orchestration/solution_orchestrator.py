@@ -18,7 +18,9 @@ class SolutionOrchestrator:
         if context.query_type == "knowledge":
 
             return self.knowledge_service.answer(
-                context.rewritten_query
+                context.rewritten_query,
+                context.rewritten_query,
+                context.retrieval_profile
             )
 
         elif context.query_type == "physiology":

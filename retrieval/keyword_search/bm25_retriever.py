@@ -1,7 +1,17 @@
-def keyword_search(query):
+from langchain_community.retrievers import BM25Retriever
 
-    print(
-        f"[BM25_QUERY] => {query}"
-    )
 
-    return []
+class KeywordRetriever:
+
+    def build(
+        self,
+        docs
+    ):
+
+        retriever = BM25Retriever.from_documents(
+            docs
+        )
+
+        retriever.k = 5
+
+        return retriever

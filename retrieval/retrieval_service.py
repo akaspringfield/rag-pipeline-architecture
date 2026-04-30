@@ -2,7 +2,11 @@ from retrieval.vector_search.chroma_retriever import build_retriever
 from retrieval.reranker.reranker import Reranker
 from common.exceptions import KnowledgeBaseEmptyException
 from common.logger import log_step
+from retrieval.filters.metadata_filter import (
+    MetadataFilter
+)
 import time
+
 
 class RetrievalService:
 
@@ -10,6 +14,10 @@ class RetrievalService:
 
         self.retriever = None
         self.reranker = Reranker()
+        self.metadata_filter = (
+            MetadataFilter()
+        )
+
     def get_retriever(self):
 
         if self.retriever is None:
@@ -23,7 +31,13 @@ class RetrievalService:
 
         return self.retriever
 
-    def retrieve(self, query):
+    
+    def retrieve(
+        self,
+        query: str,
+        tenant_id: str | None,
+        knowledge_base: str
+    ):
 
         retriever = self.get_retriever()
 
@@ -31,16 +45,22 @@ class RetrievalService:
 
         docs = retriever.invoke(query)
 
+        docs = self.metadata_filter.filter(
+            docs=docs,
+            tenant_id=tenant_id,
+            knowledge_base=knowledge_base
+        )
+
         elapsed = round(
             time.time() - start_time,
             3
         )
 
         log_step(
-            "[RETRIEVAL_DOC_COUNT]",
+            "RETRIEVAL_DOC_COUNT",
             len(docs)
         )
-        
+
         unique_docs = []
         seen = set()
 
@@ -57,12 +77,12 @@ class RetrievalService:
         docs = unique_docs
 
         log_step(
-            "[DEDUP_DOC_COUNT]",
+            "DEDUP_DOC_COUNT",
             len(docs)
         )
 
         log_step(
-            "[RETRIEVAL_TIME_SECONDS]",
+            "RETRIEVAL_TIME_SECONDS",
             elapsed
         )
 
