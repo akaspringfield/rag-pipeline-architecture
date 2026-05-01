@@ -217,4 +217,16 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Folders in project root that are not meant to be tracked by git
 chroma_store/
+storage/originals/
+tests/
+
+# Files in project root that are not meant to be tracked by git
+Pending.txt
+ingestion-pipeline.txt
+READme.txt
+retrieval-pipeline.txt
+Status.txt
+structure.txt
+Production Retrieval Implementation Plan.pdf

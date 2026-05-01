@@ -1,24 +1,24 @@
-from retrieval.vector_search.chroma_retriever import build_retriever
-from retrieval.reranker.reranker import Reranker
+import time
+
 from common.exceptions import KnowledgeBaseEmptyException
 from common.logger import log_step
-from retrieval.filters.metadata_filter import (
-    MetadataFilter
-)
-import time
+
+from retrieval.vector_search.chroma_retriever import build_retriever
+from retrieval.filters.metadata_filter import MetadataFilter
+from retrieval.reranker.reranker import Reranker
 
 
 class RetrievalService:
 
     def __init__(self):
-
         self.retriever = None
+        self.metadata_filter = MetadataFilter()
         self.reranker = Reranker()
-        self.metadata_filter = (
-            MetadataFilter()
-        )
 
-    def get_retriever(self):
+    def get_retriever(
+        self,
+        top_k: int
+    ):
 
         if self.retriever is None:
 
@@ -27,28 +27,68 @@ class RetrievalService:
                 "Loading retriever"
             )
 
-            self.retriever = build_retriever()
+            return build_retriever(
+                collection_name="default",
+                top_k=20
+            )
 
         return self.retriever
 
-    
     def retrieve(
         self,
         query: str,
-        tenant_id: str | None,
-        knowledge_base: str
+        knowledge_base: str,
+        tenant_id: str | None = None,
+        top_k: int = 20,
     ):
-
-        retriever = self.get_retriever()
 
         start_time = time.time()
 
+        retriever = self.get_retriever(
+            top_k=top_k
+        )
+
+        # Step 1: vector retrieval
         docs = retriever.invoke(query)
 
+        # Step 2: metadata filtering
         docs = self.metadata_filter.filter(
             docs=docs,
             tenant_id=tenant_id,
-            knowledge_base=knowledge_base
+            knowledge_base=knowledge_base,
+        )
+
+        # Step 3: deduplicate
+        unique_docs = []
+        seen = set()
+
+        for doc in docs:
+
+            document_id = doc.metadata.get("document_id")
+            chunk_index = doc.metadata.get("chunk_index")
+
+            key = (document_id, chunk_index)
+
+            if key not in seen:
+                seen.add(key)
+                unique_docs.append(doc)
+
+        docs = unique_docs
+
+        log_step(
+            "FILTERED_DOC_COUNT",
+            len(docs)
+        )
+
+        if len(docs) == 0:
+            raise KnowledgeBaseEmptyException(
+                "Knowledge base contains no matching documents."
+            )
+
+        # Step 4: rerank
+        reranked_docs = self.reranker.rerank(
+            query,
+            docs
         )
 
         elapsed = round(
@@ -57,61 +97,13 @@ class RetrievalService:
         )
 
         log_step(
-            "RETRIEVAL_DOC_COUNT",
-            len(docs)
-        )
-
-        unique_docs = []
-        seen = set()
-
-        for doc in docs:
-
-            content = doc.page_content.strip()
-
-            if content not in seen:
-
-                seen.add(content)
-
-                unique_docs.append(doc)
-
-        docs = unique_docs
-
-        log_step(
-            "DEDUP_DOC_COUNT",
-            len(docs)
+            "FINAL_DOC_COUNT",
+            len(reranked_docs)
         )
 
         log_step(
             "RETRIEVAL_TIME_SECONDS",
             elapsed
-        )
-
-        if len(docs) == 0:
-
-            raise KnowledgeBaseEmptyException(
-                "Knowledge base contains no documents"
-            )
-
-        for i, doc in enumerate(docs):
-
-            log_step(
-                f"DOC_{i+1}_SOURCE",
-                doc.metadata.get("source")
-            )
-
-            log_step(
-                f"DOC_{i+1}_CONTENT",
-                doc.page_content[:150]
-            )
-
-        reranked_docs = self.reranker.rerank(
-            query,
-            docs
-        )
-
-        log_step(
-            "RERANKED_DOC_COUNT",
-            len(reranked_docs)
         )
 
         return reranked_docs

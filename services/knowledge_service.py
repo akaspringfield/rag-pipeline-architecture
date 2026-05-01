@@ -33,4 +33,9 @@ class KnowledgeService:
         for chunk in chain.stream(query):
             answer += chunk
 
-        return answer
+
+        return answer(
+            query,
+            knowledge_base,
+            tenant_id=None,
+        )

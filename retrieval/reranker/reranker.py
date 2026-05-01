@@ -1,26 +1,35 @@
-from common.logger import log_step
 from sentence_transformers import CrossEncoder
 
 
 class Reranker:
 
+    _model = None
+
     def __init__(self):
 
-        self.model = CrossEncoder(
-            "cross-encoder/ms-marco-MiniLM-L-6-v2"
-        )
+        if self.__class__._model is None:
+
+            self.__class__._model = CrossEncoder(
+                "cross-encoder/ms-marco-MiniLM-L-6-v2"
+            )
+
+        self.model = self.__class__._model
 
     def rerank(
         self,
         query: str,
-        docs: list
+        docs: list,
+        top_n: int = 5
     ):
 
         if not docs:
             return []
 
         pairs = [
-            (query, doc.page_content)
+            (
+                query,
+                doc.page_content
+            )
             for doc in docs
         ]
 
@@ -29,26 +38,15 @@ class Reranker:
         )
 
         ranked = sorted(
-            zip(docs, scores),
+            zip(
+                docs,
+                scores
+            ),
             key=lambda x: x[1],
             reverse=True
         )
 
-        for idx, (_, score) in enumerate(ranked):
-
-            log_step(
-                f"RERANK_{idx+1}_SCORE",
-                float(score)
-            )
-
-        final_docs = [
+        return [
             doc
-            for doc, score in ranked[:3]
+            for doc, _ in ranked[:top_n]
         ]
-
-        log_step(
-            "FINAL_CONTEXT_DOCS",
-            len(final_docs)
-        )
-
-        return final_docs

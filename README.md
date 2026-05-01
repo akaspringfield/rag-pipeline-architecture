@@ -1,4 +1,4 @@
-# RAG Telecom Chatbot
+# RAG general purpose chatbot
 
 A Retrieval-Augmented Generation (RAG) general purpose chatbot for multiple senario it support. It answers questions about physology, legal, and medical by retrieving relevant context from different knowledge sources and generating responses with Qwen3-32B via Groq.
 
@@ -20,6 +20,8 @@ ChatPromptTemplate → Qwen3-32B (Groq) → Answer
 
 ## Project Structure
 
+use tree /F > structure.txt   
+or
 ```
 ├rag_platform/
 

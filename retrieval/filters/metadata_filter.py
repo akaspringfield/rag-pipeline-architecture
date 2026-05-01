@@ -6,36 +6,41 @@ class MetadataFilter:
     def filter(
         self,
         docs: list[Document],
-        tenant_id: str,
-        knowledge_base: str
-    ):
+        knowledge_base: str,
+        tenant_id: str | None = None,
+    ) -> list[Document]:
 
-        filtered = []
+        filtered_docs = []
 
         for doc in docs:
 
-            scope = doc.metadata.get(
+            metadata = doc.metadata
+
+            # Knowledge base must match
+            if (
+                metadata.get("knowledge_base")
+                != knowledge_base
+            ):
+                continue
+
+            scope = metadata.get(
                 "knowledge_scope"
             )
 
-            doc_tenant = doc.metadata.get(
+            chunk_tenant = metadata.get(
                 "tenant_id"
             )
 
-            kb = doc.metadata.get(
-                "knowledge_base"
-            )
-
-            if kb != knowledge_base:
+            # Public/general document
+            if scope == "general":
+                filtered_docs.append(doc)
                 continue
 
-            if scope == "general":
-                filtered.append(doc)
-
-            elif (
-                scope == "private"
-                and doc_tenant == tenant_id
+            # Tenant-specific document
+            if (
+                tenant_id is not None
+                and chunk_tenant == tenant_id
             ):
-                filtered.append(doc)
+                filtered_docs.append(doc)
 
-        return filtered
+        return filtered_docs
