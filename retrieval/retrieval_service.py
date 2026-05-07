@@ -1,3 +1,12 @@
+"""
+Expected:
+
+Chroma retrieves relevant chunks.
+BM25 also finds matches.
+RRF combines them.
+CrossEncoder orders them.
+LLM answers correctly.
+"""
 import time
 
 from common.exceptions import KnowledgeBaseEmptyException
@@ -7,6 +16,7 @@ from retrieval.vector_search.chroma_retriever import build_retriever
 from retrieval.filters.metadata_filter import MetadataFilter
 from retrieval.reranker.reranker import Reranker
 
+from config.settings import *
 
 class RetrievalService:
 
@@ -15,11 +25,11 @@ class RetrievalService:
         self.metadata_filter = MetadataFilter()
         self.reranker = Reranker()
 
+
     def get_retriever(
         self,
         top_k: int
     ):
-
         if self.retriever is None:
 
             log_step(
@@ -29,7 +39,7 @@ class RetrievalService:
 
             return build_retriever(
                 collection_name="default",
-                top_k=20
+                top_k=TOP_K
             )
 
         return self.retriever
@@ -39,7 +49,8 @@ class RetrievalService:
         query: str,
         knowledge_base: str,
         tenant_id: str | None = None,
-        top_k: int = 20,
+        conversation_id: str | None = None,
+        top_k: int = TOP_K,
     ):
 
         start_time = time.time()
@@ -85,10 +96,20 @@ class RetrievalService:
                 "Knowledge base contains no matching documents."
             )
 
+        log_step(
+            "RERANK_INPUT_COUNT",
+            len(docs)
+        )
+
         # Step 4: rerank
         reranked_docs = self.reranker.rerank(
             query,
             docs
+        )
+
+        log_step(
+            "RERANK_OUTPUT_COUNT",
+            len(reranked_docs)
         )
 
         elapsed = round(
@@ -107,3 +128,36 @@ class RetrievalService:
         )
 
         return reranked_docs
+    
+    def extract_sources(self, docs):
+
+        sources = []
+
+        seen = set()
+
+        for doc in docs:
+
+            source = {
+                "document_id": doc.metadata.get(
+                    "document_id"
+                ),
+                "chunk_index": doc.metadata.get(
+                    "chunk_index"
+                ),
+                "source": doc.metadata.get(
+                    "source"
+                )
+            }
+
+            key = (
+                source["document_id"],
+                source["chunk_index"]
+            )
+
+            if key not in seen:
+
+                seen.add(key)
+
+                sources.append(source)
+
+        return sources

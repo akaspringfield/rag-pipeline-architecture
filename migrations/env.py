@@ -1,12 +1,20 @@
 from logging.config import fileConfig
+import os
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config,create_engine,pool
 
 from alembic import context
+from database.base import Base
+# Import models so Alembic detects them
+
 from database.entities.document_entity import DocumentEntity
 from database.entities.document_chunk_entity import DocumentChunkEntity
 from database.entities.ingestion_job_entity import IngestionJobEntity
+from database.entities.chat_session_entity import ChatSessionEntity
+from database.entities.chat_message_entity import ChatMessageEntity
+
+from dotenv import load_dotenv
+load_dotenv()  # 👈 ADD THIS
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -27,12 +35,8 @@ target_metadata = None
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-from database.base import Base
-
 target_metadata = Base.metadata
 
-import os
 DATABASE_URL = (
     f"postgresql://{os.getenv('POSTGRES_USER')}:"
     f"{os.getenv('POSTGRES_PASSWORD')}@"
@@ -41,10 +45,10 @@ DATABASE_URL = (
     f"{os.getenv('POSTGRES_DB')}"
 )
 
-config.set_main_option(
-    "sqlalchemy.url",
-    os.getenv("DATABASE_URL")
-)
+print(f"DATABASE_URL- {DATABASE_URL}")
+print("DB URL =", repr(DATABASE_URL))
+print("TYPE =", type(DATABASE_URL))
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -58,9 +62,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=DATABASE_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -69,7 +72,6 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
-
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -77,20 +79,16 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    connectable = create_engine(DATABASE_URL)
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata
         )
 
         with context.begin_transaction():
             context.run_migrations()
-
 
 if context.is_offline_mode():
     run_migrations_offline()

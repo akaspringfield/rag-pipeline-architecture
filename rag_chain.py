@@ -1,4 +1,12 @@
 """
+Deprecated.
+
+KnowledgeService now orchestrates retrieval,
+prompt construction, and LLM invocation directly.
+Retained temporarily for reference.
+"""
+
+"""
 Builds the RAG chain:
 
 Query

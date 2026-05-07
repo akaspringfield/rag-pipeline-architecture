@@ -1,19 +1,3 @@
-def fuse(vector_docs, keyword_docs):
-    merged = []
-
-    seen = set()
-
-    for doc in vector_docs + keyword_docs:
-
-        if doc.page_content not in seen:
-
-            merged.append(doc)
-
-            seen.add(doc.page_content)
-
-    return merged
-
-
 class ReciprocalRankFusion:
 
     def fuse(
@@ -28,22 +12,25 @@ class ReciprocalRankFusion:
 
             for rank, doc in enumerate(results):
 
-                content = doc.page_content
+                key = (
+                    doc.metadata.get("document_id"),
+                    doc.metadata.get("chunk_index")
+                )
 
-                if content not in scores:
+                if key not in scores:
 
-                    scores[content] = {
+                    scores[key] = {
                         "doc": doc,
-                        "score": 0
+                        "score": 0.0
                     }
 
-                scores[content]["score"] += (
-                    1 / (k + rank + 1)
+                scores[key]["score"] += (
+                    1.0 / (k + rank + 1)
                 )
 
         ranked = sorted(
             scores.values(),
-            key=lambda x: x["score"],
+            key=lambda item: item["score"],
             reverse=True
         )
 

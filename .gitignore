@@ -221,6 +221,8 @@ __marimo__/
 chroma_store/
 storage/originals/
 tests/
+data/
+logs/
 
 # Files in project root that are not meant to be tracked by git
 Pending.txt
